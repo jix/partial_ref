@@ -1,0 +1,11 @@
+[package]
+name = "partial_ref_tests"
+version = "0.1.0"
+authors = ["Jannis Harder <me@jix.one>"]
+license = "MIT/Apache-2.0"
+edition = "2018"
+publish = false
+
+[dependencies]
+partial_ref = { path = "../partial_ref" }
+partial_ref_derive = { path = "../partial_ref_derive" }

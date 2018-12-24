@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "partial_ref",
+    "partial_ref_derive",
+    "partial_ref_tests",
+]
