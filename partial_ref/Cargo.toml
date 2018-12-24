@@ -7,7 +7,7 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 [dependencies]
-partial_ref_derive = { path = "../partial_ref_derive" }
+partial_ref_derive = { path = "../partial_ref_derive", version = "=0.1.0" }
 
 [dev-dependencies]
 partial_ref_tests = { path = "../partial_ref_tests" }
