@@ -1,5 +1,10 @@
 # partial_ref - Type checked partial references.
 
+[![crates.io](https://img.shields.io/crates/v/partial_ref.svg)](https://crates.io/crates/partial_ref)
+[![docs.rs](https://docs.rs/partial_ref/badge.svg)](https://docs.rs/partial_ref)
+[![Build Status](https://travis-ci.com/jix/partial_ref.svg?branch=master)](https://travis-ci.com/jix/partial_ref)
+![](https://img.shields.io/crates/l/partial_ref.svg)
+
 This crate provides type checked partial references for rust. Type checked
 partial references are one solution to solve
 [interprocedural borrowing conflicts][interprocedural-conflicts].
