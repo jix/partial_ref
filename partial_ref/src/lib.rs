@@ -385,7 +385,7 @@ impl<'a, Target: PartialRefTarget + ?Sized> PartialRef<'a> for Ref<'a, Target> {
     unsafe fn from_raw(ptr: *mut <Self::Target as PartialRefTarget>::RawTarget) -> Self {
         Ref {
             ptr,
-            phantom: Default::default(),
+            phantom: PhantomData,
         }
     }
 
@@ -425,7 +425,7 @@ where
     unsafe fn from_raw(ptr: *mut <Self::Target as PartialRefTarget>::RawTarget) -> Self {
         Mut {
             reference: Reference::from_raw(ptr),
-            phantom: Default::default(),
+            phantom: PhantomData,
         }
     }
 
@@ -454,7 +454,7 @@ where
     unsafe fn from_raw(ptr: *mut <Self::Target as PartialRefTarget>::RawTarget) -> Self {
         Const {
             reference: Reference::from_raw(ptr),
-            phantom: Default::default(),
+            phantom: PhantomData,
         }
     }
 
