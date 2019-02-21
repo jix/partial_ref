@@ -44,13 +44,13 @@ macro_rules! part {
 ///   * `partial!('a Ty, mut PartA | PartB)` is `Mut<Nested<PartA, PartB>, Ref<'a, Ty>>`
 #[macro_export]
 macro_rules! partial {
-    ($target:ty) => { $crate::Ref<$target> };
     ($target_lt:lifetime $target:ty) => { $crate::Ref<$target_lt, $target> };
-    ($target:ty, $($parts:tt)* ) => {
-        partial!(@extend $crate::Ref<$target>, $($parts)*)
-    };
     ($target_lt:lifetime $target:ty, $($parts:tt)*) => {
         partial!(@extend $crate::Ref<$target_lt, $target>, $($parts)*)
+    };
+    ($target:ty) => { $crate::Ref<$target> };
+    ($target:ty, $($parts:tt)* ) => {
+        partial!(@extend $crate::Ref<$target>, $($parts)*)
     };
     (@extend $target:ty) => {$target};
     (@extend $target:ty, ) => {$target};

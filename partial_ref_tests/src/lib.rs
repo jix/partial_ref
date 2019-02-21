@@ -45,6 +45,17 @@ where
     std::mem::swap(a, b);
 }
 
+pub fn swap_a_and_b_lt<'a, T>(mut foo: partial!('a T, mut PartA, mut PartB))
+where
+    T: PartialRefTarget,
+    T: HasPart<PartA>,
+    T: HasPart<PartB>,
+{
+    split_borrow!(a, b = &(mut PartA) foo);
+
+    std::mem::swap(a.part_mut(PartA), b.part_mut(PartB))
+}
+
 #[test]
 fn test_swap_a_and_b() {
     let mut f = Foo { a: 1, b: 2 };
@@ -71,6 +82,18 @@ fn test_swap_a_and_b_alt() {
     assert_eq!(*fr.part(PartB), 1);
 
     drop(x);
+}
+
+#[test]
+fn test_swap_a_and_b_lt() {
+    let mut f = Foo { a: 1, b: 2 };
+
+    let mut fr = f.into_partial_ref_mut();
+
+    swap_a_and_b_lt(fr.borrow());
+
+    assert_eq!(*fr.part(PartA), 2);
+    assert_eq!(*fr.part(PartB), 1);
 }
 
 #[derive(Debug, PartialRefTarget)]
