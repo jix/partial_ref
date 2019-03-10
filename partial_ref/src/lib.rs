@@ -150,16 +150,19 @@ pub trait PartialRefTarget {
     type RawTarget: ?Sized;
 }
 
-/// A partial reference.
-///
-/// This is implemented by variants of [`Ref`], [`Mut`] and [`Const`]. This is only implemented if the
-/// parts of any contained [`Mut`] or [`Const`] are valid for the referenced type.
-pub trait PartialRef<'a>: Sized {
+/// Helper trait to associate the target type with a [`PartialRef`] without needing a lifetime.
+pub trait HasTarget {
     /// The referenced type.
     ///
     // TODO add a warning that Target::RawTarget could be != Target when such a feature lands)
     type Target: PartialRefTarget + ?Sized;
+}
 
+/// A partial reference.
+///
+/// This is implemented by variants of [`Ref`], [`Mut`] and [`Const`]. This is only implemented if the
+/// parts of any contained [`Mut`] or [`Const`] are valid for the referenced type.
+pub trait PartialRef<'a>: HasTarget + Sized {
     /// Create a partial reference from a raw pointer.
     ///
     /// This is unsafe for two reasons. It can be used to dereference a raw pointer, which is
@@ -377,10 +380,12 @@ pub struct Ref<'a, Target: PartialRefTarget + ?Sized> {
     phantom: PhantomData<(&'a mut Target)>,
 }
 
+impl<'a, Target: PartialRefTarget + ?Sized> HasTarget for Ref<'a, Target> {
+    type Target = Target;
+}
+
 /// An empty reference to a valid target is a valid reference.
 impl<'a, Target: PartialRefTarget + ?Sized> PartialRef<'a> for Ref<'a, Target> {
-    type Target = Target;
-
     #[inline(always)]
     unsafe fn from_raw(ptr: *mut <Self::Target as PartialRefTarget>::RawTarget) -> Self {
         Ref {
@@ -408,9 +413,16 @@ impl<'a, Target: PartialRefTarget> Clone for Ref<'a, Target> {
 
 /// A mutable part of a partial reference.
 #[repr(transparent)]
-pub struct Mut<Part, Reference> {
-    reference: Reference,
-    phantom: PhantomData<Part>,
+pub struct Mut<Part, Reference: HasTarget> {
+    ptr: *mut <<Reference as HasTarget>::Target as PartialRefTarget>::RawTarget,
+    phantom: PhantomData<(Reference, Part)>,
+}
+
+impl<'a, SomePart: Part, Reference: PartialRef<'a>> HasTarget for Mut<SomePart, Reference>
+where
+    Reference::Target: HasPart<SomePart>,
+{
+    type Target = Reference::Target;
 }
 
 /// Extending a valid reference by a mutable part is still a valid reference when the reference
@@ -419,27 +431,32 @@ impl<'a, SomePart: Part, Reference: PartialRef<'a>> PartialRef<'a> for Mut<SomeP
 where
     Reference::Target: HasPart<SomePart>,
 {
-    type Target = Reference::Target;
-
     #[inline(always)]
     unsafe fn from_raw(ptr: *mut <Self::Target as PartialRefTarget>::RawTarget) -> Self {
         Mut {
-            reference: Reference::from_raw(ptr),
+            ptr,
             phantom: PhantomData,
         }
     }
 
     #[inline(always)]
     fn get_raw(&self) -> *mut <Self::Target as PartialRefTarget>::RawTarget {
-        self.reference.get_raw()
+        self.ptr
     }
 }
 
 /// A constant (immutable) part of a partial reference.
 #[repr(transparent)]
-pub struct Const<Part, Reference> {
-    reference: Reference,
-    phantom: PhantomData<Part>,
+pub struct Const<Part, Reference: HasTarget> {
+    ptr: *mut <<Reference as HasTarget>::Target as PartialRefTarget>::RawTarget,
+    phantom: PhantomData<(Reference, Part)>,
+}
+
+impl<'a, SomePart: Part, Reference: PartialRef<'a>> HasTarget for Const<SomePart, Reference>
+where
+    Reference::Target: HasPart<SomePart>,
+{
+    type Target = Reference::Target;
 }
 
 /// Extending a valid reference by a constant part is still a valid reference when the reference
@@ -448,27 +465,25 @@ impl<'a, SomePart: Part, Reference: PartialRef<'a>> PartialRef<'a> for Const<Som
 where
     Reference::Target: HasPart<SomePart>,
 {
-    type Target = Reference::Target;
-
     #[inline(always)]
     unsafe fn from_raw(ptr: *mut <Self::Target as PartialRefTarget>::RawTarget) -> Self {
         Const {
-            reference: Reference::from_raw(ptr),
+            ptr,
             phantom: PhantomData,
         }
     }
 
     #[inline(always)]
     fn get_raw(&self) -> *mut <Self::Target as PartialRefTarget>::RawTarget {
-        self.reference.get_raw()
+        self.ptr
     }
 }
 
 /// A reference containing just constant parts is safe to clone.
-impl<SomePart, Reference: Copy> Copy for Const<SomePart, Reference> {}
+impl<SomePart, Reference: Copy + HasTarget> Copy for Const<SomePart, Reference> {}
 
 /// A reference containing just constant parts is safe to clone.
-impl<SomePart, Reference: Copy> Clone for Const<SomePart, Reference> {
+impl<SomePart, Reference: Copy + HasTarget> Clone for Const<SomePart, Reference> {
     #[inline(always)]
     fn clone(&self) -> Self {
         *self
@@ -873,6 +888,7 @@ where
     PluckedRef: PluckConst<'a, SubsetPart, PartIndex>,
     <PluckedRef as PluckConst<'a, SubsetPart, PartIndex>>::Remainder:
         HasSubset<'a, Reference, TailIndex>,
+    Reference: HasTarget,
 {
     type Remainder =
         <<PluckedRef as PluckConst<'a, SubsetPart, PartIndex>>::Remainder as HasSubset<
@@ -890,6 +906,7 @@ where
     PluckedRef: PluckMut<'a, SubsetPart, PartIndex>,
     <PluckedRef as PluckMut<'a, SubsetPart, PartIndex>>::Remainder:
         HasSubset<'a, Reference, TailIndex>,
+    Reference: HasTarget,
 {
     type Remainder =
         <<PluckedRef as PluckMut<'a, SubsetPart, PartIndex>>::Remainder as HasSubset<
