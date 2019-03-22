@@ -188,9 +188,8 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     ///
     /// Usually the type parameters can be inferred.
     #[inline(always)]
-    fn borrow<'b, BorrowedRef, SubsetIndex>(&'b mut self) -> BorrowedRef
+    fn borrow<BorrowedRef, SubsetIndex>(&'a mut self) -> BorrowedRef
     where
-        'a: 'b,
         BorrowedRef: PartialRef<'a, Target = Self::Target>,
         Self: HasSubset<'a, BorrowedRef, SubsetIndex>,
     {
@@ -207,9 +206,8 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     ///
     /// Usually the type parameters can be inferred.
     #[inline(always)]
-    fn part<'b, FieldPart, PartIndex, FieldType>(&'b mut self, _part: FieldPart) -> &'a FieldType
+    fn part<FieldPart, PartIndex, FieldType>(&'a self, _part: FieldPart) -> &'a FieldType
     where
-        'a: 'b,
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
         Self: PluckConst<'a, FieldPart, PartIndex>,
@@ -231,12 +229,11 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     ///
     /// Usually the type parameters can be inferred.
     #[inline(always)]
-    fn part_mut<'b, FieldPart, PartIndex, FieldType>(
-        &'b mut self,
+    fn part_mut<FieldPart, PartIndex, FieldType>(
+        &'a mut self,
         _part: FieldPart,
     ) -> &'a mut FieldType
     where
-        'a: 'b,
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
         Self: PluckMut<'a, FieldPart, PartIndex>,
@@ -260,9 +257,8 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     ///
     /// Usually the type parameters can be inferred.
     #[inline(always)]
-    fn split_borrow<'b, BorrowedRef, SubsetIndex>(&'b mut self) -> (BorrowedRef, Self::Remainder)
+    fn split_borrow<BorrowedRef, SubsetIndex>(&'a mut self) -> (BorrowedRef, Self::Remainder)
     where
-        'a: 'b,
         BorrowedRef: PartialRef<'a, Target = Self::Target>,
         Self: HasSubset<'a, BorrowedRef, SubsetIndex>,
     {
@@ -275,12 +271,11 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     /// This is equivalent to [`part`](PartialRef::part) but also returns a partial reference as
     /// described in [`split_borrow`](PartialRef::split_borrow).
     #[inline(always)]
-    fn split_part<'b, FieldPart, PartIndex, FieldType>(
-        &'b mut self,
+    fn split_part<FieldPart, PartIndex, FieldType>(
+        &'a mut self,
         _part: FieldPart,
     ) -> (&'a FieldType, Self::Remainder)
     where
-        'a: 'b,
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
         Self: PluckConst<'a, FieldPart, PartIndex>,
@@ -301,12 +296,11 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     /// This is equivalent to [`part_mut`](PartialRef::part_mut) but also returns a partial
     /// reference as described in [`split_borrow`](PartialRef::split_borrow).
     #[inline(always)]
-    fn split_part_mut<'b, FieldPart, PartIndex, FieldType>(
-        &'b mut self,
+    fn split_part_mut<FieldPart, PartIndex, FieldType>(
+        &'a mut self,
         _part: FieldPart,
     ) -> (&'a mut FieldType, Self::Remainder)
     where
-        'a: 'b,
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
         Self: PluckMut<'a, FieldPart, PartIndex>,
@@ -385,7 +379,7 @@ impl<'a, Target: PartialRefTarget + ?Sized> HasTarget for Ref<'a, Target> {
 }
 
 /// An empty reference to a valid target is a valid reference.
-impl<'a, Target: PartialRefTarget + ?Sized> PartialRef<'a> for Ref<'a, Target> {
+impl<'a, 'b: 'a, Target: PartialRefTarget + ?Sized> PartialRef<'a> for Ref<'b, Target> {
     #[inline(always)]
     unsafe fn from_raw(ptr: *mut <Self::Target as PartialRefTarget>::RawTarget) -> Self {
         Ref {
