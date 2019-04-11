@@ -2,9 +2,16 @@
 #![recursion_limit = "128"]
 extern crate proc_macro;
 
+use std::collections::HashSet;
+
 use crate::proc_macro::TokenStream;
-use quote::quote;
-use syn::{parse_macro_input, parse_str, Attribute, Data, DeriveInput, Lit, Member, Meta, Type};
+
+use proc_macro2::Span;
+use quote::{quote, ToTokens};
+use syn::{
+    parse_macro_input, parse_str, Attribute, Data, DeriveInput, Lifetime, LifetimeDef, Lit, Member,
+    Meta, Type,
+};
 
 fn parse_attribute_as_type(attr: &Attribute) -> Type {
     let parse_panic = || panic!("could not parse attribute `{}`", attr.tts.to_string());
@@ -21,6 +28,45 @@ fn parse_attribute_as_type(attr: &Attribute) -> Type {
     }
     parse_panic();
     unreachable!()
+}
+
+/// If the input is non-empty remove the enclosing `<` and `>` and prepend a comma.
+///
+/// Does not check whether the enclosing tokens actually are `<` and `>`.
+fn generics_to_extra_generics(generics: &impl ToTokens) -> proc_macro2::TokenStream {
+    let mut generics_tokens = proc_macro2::TokenStream::new();
+    generics.to_tokens(&mut generics_tokens);
+
+    let mut generics_tokens = generics_tokens.into_iter().collect::<Vec<_>>();
+
+    if !generics_tokens.is_empty() {
+        generics_tokens[0] = quote!(,).into_iter().next().unwrap();
+        generics_tokens.pop();
+    }
+
+    let mut extra_tokens = proc_macro2::TokenStream::new();
+    extra_tokens.extend(generics_tokens);
+    extra_tokens
+}
+
+/// Generate a new lifetime that doesn't conflict with the existing lifetimes.
+fn fresh_lifetime<'a>(lifetimes: impl Iterator<Item = &'a LifetimeDef>, name: &str) -> Lifetime {
+    let mut used_idents = HashSet::new();
+    for lifetime in lifetimes {
+        used_idents.insert(lifetime.lifetime.ident.to_string());
+    }
+
+    let mut lifetime_name = name.to_owned();
+    let mut counter = 0;
+
+    while used_idents.contains(&lifetime_name) {
+        use std::fmt::Write;
+        counter += 1;
+        lifetime_name.clear();
+        write!(&mut lifetime_name, "{}{}", name, counter).unwrap();
+    }
+
+    Lifetime::new(&format!("'{}", lifetime_name), Span::call_site())
 }
 
 /// Derives instances of PartialRefTarget and associated traits.
@@ -51,6 +97,19 @@ pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let target_ident = input.ident;
+
+    let lt_a = fresh_lifetime(input.generics.lifetimes(), "a");
+
+    let (impl_generics, target_generics, where_clause) = input.generics.split_for_impl();
+
+    if where_clause.is_some() {
+        panic!("cannot derive PartialRef target for structs with a where clause");
+        // TODO lift this restriction
+    }
+
+    let extra_generics = generics_to_extra_generics(&impl_generics);
+
+    let target_type = quote!(#target_ident #target_generics);
 
     let data_struct = match input.data {
         Data::Struct(data_struct) => data_struct,
@@ -95,8 +154,8 @@ pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
         }
     }
 
-    let mut const_type = quote!(::partial_ref::Ref<'a, #target_ident>);
-    let mut mut_type = quote!(::partial_ref::Ref<'a, #target_ident>);
+    let mut const_type = quote!(::partial_ref::Ref<#lt_a, #target_type>);
+    let mut mut_type = quote!(::partial_ref::Ref<#lt_a, #target_type>);
     let mut split_const_type = quote!(Reference);
     let mut split_mut_type = quote!(Reference);
 
@@ -139,7 +198,7 @@ pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
     let mut result = vec![];
 
     result.push(TokenStream::from(quote! {
-        impl<'a> ::partial_ref::IntoPartialRef<'a> for &'a #target_ident {
+        impl<#lt_a #extra_generics> ::partial_ref::IntoPartialRef<#lt_a> for &#lt_a #target_type {
             type Ref = #const_type;
             #[inline(always)]
             fn into_partial_ref(self) -> Self::Ref {
@@ -149,7 +208,8 @@ pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
             }
         }
 
-        impl<'a> ::partial_ref::IntoPartialRef<'a> for &'a mut #target_ident {
+        impl<#lt_a #extra_generics> ::partial_ref::IntoPartialRef<#lt_a>
+        for &#lt_a mut #target_type {
             type Ref = #mut_type;
             #[inline(always)]
             fn into_partial_ref(self) -> Self::Ref {
@@ -159,25 +219,25 @@ pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
             }
         }
 
-        unsafe impl<'a, ContainingPart, Reference>
-            ::partial_ref::SplitIntoParts<'a, ContainingPart, Reference> for #target_ident
+        unsafe impl<#lt_a #extra_generics, ContainingPart, Reference>
+            ::partial_ref::SplitIntoParts<#lt_a, ContainingPart, Reference> for #target_type
         where
             ContainingPart: ::partial_ref::Part<PartType=::partial_ref::Field<Self>>,
-            Reference: ::partial_ref::PartialRef<'a>,
+            Reference: ::partial_ref::PartialRef<#lt_a>,
             Reference::Target: ::partial_ref::HasPart<ContainingPart>,
         {
             type Result = #split_const_type;
             type ResultMut = #split_mut_type;
         }
 
-        impl ::partial_ref::PartialRefTarget for #target_ident {
+        impl #impl_generics ::partial_ref::PartialRefTarget for #target_type {
             type RawTarget = Self;
         }
     }));
 
     for part in abstract_parts.iter() {
         result.push(TokenStream::from(quote! {
-             impl ::partial_ref::HasPart<#part> for #target_ident {
+             impl #impl_generics ::partial_ref::HasPart<#part> for #target_type {
                 #[inline(always)]
                 unsafe fn part_ptr(ptr: *const Self) -> () {
                     unreachable!()
@@ -193,7 +253,7 @@ pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
 
     for (member, part) in typed_parts.iter() {
         result.push(TokenStream::from(quote! {
-             impl ::partial_ref::HasPart<#part> for #target_ident {
+             impl #impl_generics ::partial_ref::HasPart<#part> for #target_type {
                 #[inline(always)]
                 unsafe fn part_ptr(
                     ptr: *const Self
