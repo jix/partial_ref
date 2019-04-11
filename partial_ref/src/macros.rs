@@ -7,11 +7,19 @@
 /// [`Field`] parts using `part!(PartName: FieldType);` or `part!(pub PartName: FieldType);`.
 #[macro_export]
 macro_rules! part {
-    ($part:ident) => { part!(@template $part () ($crate::AbstractPart)); };
-    (pub $part:ident) => { part!(@template $part (pub) ($crate::AbstractPart)); };
-    ($part:ident : $field:ty) => { part!(@template $part () ($crate::Field<$field>)); };
-    (pub $part:ident : $field:ty) => { part!(@template $part (pub) ($crate::Field<$field>)); };
-    (@template $part:ident ($($vis:tt)*) ($($part_type:tt)*)) => {
+    ($part:ident) => { part!(@template $part () () ($crate::AbstractPart)); };
+    (pub $part:ident) => { part!(@template $part () (pub) ($crate::AbstractPart)); };
+    ($part:ident<> : $field:ty) => { part!($part : $field); };
+    (pub $part:ident<> : $field:ty) => { part!(pub $part : $field); };
+    ($part:ident<$($lt:lifetime),*> : $field:ty) => {
+        part!(@template $part ($($lt),*) () ($crate::Field<$field>) ($field));
+    };
+    (pub $part:ident<$($lt:lifetime),*> : $field:ty) => {
+        part!(@template $part ($($lt),*) (pub) ($crate::Field<$field>) ($field));
+    };
+    ($part:ident : $field:ty) => { part!(@template $part () () ($crate::Field<$field>)); };
+    (pub $part:ident : $field:ty) => { part!(@template $part () (pub) ($crate::Field<$field>)); };
+    (@template $part:ident () ($($vis:tt)*) ($($part_type:tt)*)) => {
         #[derive(Default)]
         $($vis)* struct $part;
         impl $crate::Part for $part {
@@ -26,7 +34,23 @@ macro_rules! part {
                 std::default::Default::default()
             }
         }
-    }
+    };
+    (@template $part:ident ($($lt:lifetime),*) ($($vis:tt)*) ($($part_type:tt)*) ($field:ty)) => {
+        #[derive(Default)]
+        $($vis)* struct $part<$($lt),*>(::std::marker::PhantomData<$field>);
+        impl<$($lt),*> $crate::Part for $part<$($lt),*> {
+            type PartType = $($part_type)*;
+        }
+
+        // TODO maybe constrain InnerPart
+        impl<$($lt),*, InnerPart: $crate::Part> ::std::ops::BitOr<InnerPart> for $part<$($lt),*> {
+            type Output = $crate::Nested<$part<$($lt),*>, InnerPart>;
+
+            fn bitor(self, _rhs: InnerPart) -> Self::Output {
+                std::default::Default::default()
+            }
+        }
+    };
 }
 
 /// Concise syntax for partial reference types.

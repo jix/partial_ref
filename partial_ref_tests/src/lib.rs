@@ -15,8 +15,14 @@ pub mod isolated {
 
     part!(pub PartC);
     part!(pub PartD);
-    part!(pub PartA: u32);
+    part!(pub PartA<>: u32);
     part!(pub PartB: u32);
+
+    pub struct RefFoo<'a> {
+        pub a: &'a mut u32,
+    }
+
+    part!(pub PartRefA<'a>: RefFoo<'a>);
 }
 
 use self::isolated::*;
