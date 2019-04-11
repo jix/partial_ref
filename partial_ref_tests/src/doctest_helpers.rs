@@ -6,11 +6,11 @@ part!(pub Weights: Vec<f32>);
 
 #[derive(PartialRefTarget, Default)]
 pub struct Graph {
-    #[part = "Neighbors"]
+    #[part(Neighbors)]
     pub neighbors: Vec<Vec<usize>>,
-    #[part = "Colors"]
+    #[part(Colors)]
     pub colors: Vec<usize>,
-    #[part = "Weights"]
+    #[part(Weights)]
     pub weights: Vec<f32>,
 }
 

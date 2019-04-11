@@ -4,12 +4,12 @@ pub mod isolated {
     // This module imports just the minimum required to partially test macro hygiene
     use partial_ref::{part, PartialRefTarget};
     #[derive(Debug, PartialRefTarget)]
-    #[part = "PartC"]
-    #[part = "PartD"]
+    #[part(PartC)]
+    #[part(PartD)]
     pub struct Foo {
-        #[part = "PartA"]
+        #[part(PartA)]
         pub a: u32,
-        #[part = "PartB"]
+        #[part(PartB)]
         pub b: u32,
     }
 
@@ -104,9 +104,9 @@ fn test_swap_a_and_b_lt() {
 
 #[derive(Debug, PartialRefTarget)]
 struct Bar {
-    #[part = "PartFoo"]
+    #[part(PartFoo)]
     foo: Foo,
-    #[part = "PartA"]
+    #[part(isolated::PartA)]
     a: u32,
 }
 
@@ -114,9 +114,9 @@ part!(PartFoo: Foo);
 
 #[derive(Debug, PartialRefTarget)]
 struct Baz {
-    #[part = "PartBar"]
+    #[part(PartBar)]
     bar: Bar,
-    #[part = "PartA"]
+    #[part(PartA)]
     a: u32,
 }
 

@@ -6,14 +6,18 @@ use std::collections::HashSet;
 
 use crate::proc_macro::TokenStream;
 
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenTree};
 use quote::{quote, ToTokens};
 use syn::{
-    parse_macro_input, parse_str, Attribute, Data, DeriveInput, Lifetime, LifetimeDef, Lit, Member,
-    Meta, Type,
+    parse_macro_input, parse_quote, parse_str, Attribute, Data, DeriveInput, Lifetime, LifetimeDef,
+    Lit, Member, Meta, Type,
 };
 
 fn parse_attribute_as_type(attr: &Attribute) -> Type {
+    if let Some(TokenTree::Group(group)) = attr.tts.clone().into_iter().next() {
+        return parse_quote!(#group);
+    }
+
     let parse_panic = || panic!("could not parse attribute `{}`", attr.tts.to_string());
     let meta = attr.parse_meta().unwrap_or_else(|_| parse_panic());
     match meta {
@@ -71,10 +75,10 @@ fn fresh_lifetime<'a>(lifetimes: impl Iterator<Item = &'a LifetimeDef>, name: &s
 
 /// Derives instances of PartialRefTarget and associated traits.
 ///
-/// Can only be used for structs. The attribute `#[part = "PartName"]` can be used on the struct
-/// itself for an abstract part or on a field for a field part. Parts have to be declared
-/// separately. `PartName` can be any valid rust type that implements the Part trait. For fields the
-/// field type of the part has to match the actual type of the field.
+/// Can only be used for structs. The attribute `#[part(PartName)]` can be used on the struct itself
+/// for an abstract part or on a field for a field part. Parts have to be declared separately.
+/// `PartName` can be any valid rust type that implements the Part trait. For fields the field type
+/// of the part has to match the actual type of the field.
 ///
 /// Example:
 ///
@@ -82,15 +86,20 @@ fn fresh_lifetime<'a>(lifetimes: impl Iterator<Item = &'a LifetimeDef>, name: &s
 /// use partial_ref::{PartialRefTarget, part};
 ///
 /// #[derive(PartialRefTarget)]
-/// #[part = "SomeAbstractPart"]
+/// #[part(SomeAbstractPart)]
 /// struct ExampleStruct {
 ///     field_without_part: usize,
-///     #[part = "SomeFieldPart"]
+///     #[part(SomeFieldPart)]
 ///     a: usize,
-///     #[part = "another_crate::AnotherFieldPart"]
+///     #[part(another_crate::AnotherFieldPart)]
 ///     b: usize,
 /// }
 /// ```
+///
+/// Instead of `#[part(PartName)]` it is also possible to use `#[part = "PartName"]` which was the
+/// only supported syntax in previous versions of this crate.
+///
+
 // TODO figure out how to link to doc items of the partial_ref crate
 #[proc_macro_derive(PartialRefTarget, attributes(part))]
 pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
