@@ -37,7 +37,13 @@ macro_rules! part {
     };
     (@template $part:ident ($($lt:lifetime),*) ($($vis:tt)*) ($($part_type:tt)*) ($field:ty)) => {
         #[derive(Default)]
-        $($vis)* struct $part<$($lt),*>(::std::marker::PhantomData<$field>);
+        $($vis)* struct $part<$($lt),*> {
+            phantom: ::std::marker::PhantomData<$field>,
+        }
+
+        #[allow(non_upper_case_globals)]
+        $($vis)* const $part: $part = $part { phantom: ::std::marker::PhantomData };
+
         impl<$($lt),*> $crate::Part for $part<$($lt),*> {
             type PartType = $($part_type)*;
         }
