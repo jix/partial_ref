@@ -1,7 +1,7 @@
 [package]
 name = "partial_ref"
 description = "Type checked partial references"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Jannis Harder <me@jix.one>"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/jix/partial_ref"
@@ -9,7 +9,7 @@ readme = "README.md"
 edition = "2018"
 
 [dependencies]
-partial_ref_derive = { path = "../partial_ref_derive", version = "=0.2.0" }
+partial_ref_derive = { path = "../partial_ref_derive", version = "=0.3.0" }
 
 [dev-dependencies]
 partial_ref_tests = { path = "../partial_ref_tests" }
