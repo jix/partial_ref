@@ -206,10 +206,14 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     ///
     /// Usually the type parameters can be inferred.
     #[inline(always)]
-    fn part<FieldPart, PartIndex, FieldType>(&'a self, _part: FieldPart) -> &'a FieldType
+    fn part<FieldPartSpec, FieldPart, PartIndex, FieldType>(
+        &'a self,
+        _part: FieldPartSpec,
+    ) -> &'a FieldType
     where
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
+        FieldPartSpec: PartSpec<FieldPart>,
         Self: PluckConst<'a, FieldPart, PartIndex>,
         Self::Target: HasPart<FieldPart> + 'a,
     {
@@ -229,13 +233,14 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     ///
     /// Usually the type parameters can be inferred.
     #[inline(always)]
-    fn part_mut<FieldPart, PartIndex, FieldType>(
+    fn part_mut<FieldPartSpec, FieldPart, PartIndex, FieldType>(
         &'a mut self,
-        _part: FieldPart,
+        _part: FieldPartSpec,
     ) -> &'a mut FieldType
     where
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
+        FieldPartSpec: PartSpec<FieldPart>,
         Self: PluckMut<'a, FieldPart, PartIndex>,
         Self::Target: HasPart<FieldPart> + 'a,
     {
@@ -271,13 +276,14 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     /// This is equivalent to [`part`](PartialRef::part) but also returns a partial reference as
     /// described in [`split_borrow`](PartialRef::split_borrow).
     #[inline(always)]
-    fn split_part<FieldPart, PartIndex, FieldType>(
+    fn split_part<FieldPartSpec, FieldPart, PartIndex, FieldType>(
         &'a mut self,
-        _part: FieldPart,
+        _part: FieldPartSpec,
     ) -> (&'a FieldType, Self::Remainder)
     where
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
+        FieldPartSpec: PartSpec<FieldPart>,
         Self: PluckConst<'a, FieldPart, PartIndex>,
         Self::Target: HasPart<FieldPart> + 'a,
     {
@@ -296,13 +302,14 @@ pub trait PartialRef<'a>: HasTarget + Sized {
     /// This is equivalent to [`part_mut`](PartialRef::part_mut) but also returns a partial
     /// reference as described in [`split_borrow`](PartialRef::split_borrow).
     #[inline(always)]
-    fn split_part_mut<FieldPart, PartIndex, FieldType>(
+    fn split_part_mut<FieldPartSpec, FieldPart, PartIndex, FieldType>(
         &'a mut self,
-        _part: FieldPart,
+        _part: FieldPartSpec,
     ) -> (&'a mut FieldType, Self::Remainder)
     where
         FieldType: ?Sized,
         FieldPart: Part<PartType = Field<FieldType>>,
+        FieldPartSpec: PartSpec<FieldPart>,
         Self: PluckMut<'a, FieldPart, PartIndex>,
         Self::Target: HasPart<FieldPart> + 'a,
     {
@@ -528,6 +535,16 @@ pub trait Part: Default {
     type PartType: PartType;
 }
 
+/// Helper trait to strip lifetimes from a part.
+///
+/// Every part `SomePart<'a, ...>` should implement `PartSpec<SomePart<'b, ...>>`. This is used by
+/// the [`part`](PartialRef::part), [`part_mut`](PartialRef::part_mut),
+/// [`split_part`](PartialRef::split_part) and [`split_part_mut`](PartialRef::split_part_mut)
+/// functions. This allows the passed parameter to have a different lifetime than the accessed part.
+/// This in turn enables part selection using globals with static lifetimes as declared by the
+/// [`part`] macro.
+pub trait PartSpec<Part> {}
+
 /// Implemented when a reference target has a part.
 ///
 /// This trait provides methods for unchecked access to a part of a reference target.
@@ -603,6 +620,13 @@ where
     OuterFieldType: PartialRefTarget<RawTarget = OuterFieldType>,
 {
     type PartType = Inner::PartType;
+}
+
+impl<Outer, Inner, OuterS, InnerS> PartSpec<Nested<OuterS, InnerS>> for Nested<Outer, Inner>
+where
+    Outer: PartSpec<OuterS>,
+    Inner: PartSpec<InnerS>,
+{
 }
 
 /// A reference has a nested part if it has the outer part and the nested part is valid.

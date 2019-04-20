@@ -26,6 +26,8 @@ macro_rules! part {
             type PartType = $($part_type)*;
         }
 
+        impl $crate::PartSpec<$part> for $part {}
+
         // TODO maybe constrain InnerPart
         impl<InnerPart: $crate::Part> ::std::ops::BitOr<InnerPart> for $part {
             type Output = $crate::Nested<$part, InnerPart>;
@@ -48,6 +50,8 @@ macro_rules! part {
             type PartType = $($part_type)*;
         }
 
+        part!(@spec_template $part ($($lt),*));
+
         // TODO maybe constrain InnerPart
         impl<$($lt),*, InnerPart: $crate::Part> ::std::ops::BitOr<InnerPart> for $part<$($lt),*> {
             type Output = $crate::Nested<$part<$($lt),*>, InnerPart>;
@@ -56,6 +60,21 @@ macro_rules! part {
                 std::default::Default::default()
             }
         }
+    };
+    (@spec_template $part:ident ($l:lifetime)) => {
+        impl<'a, 'b>  $crate::PartSpec<$part<'a>> for $part<'b> {}
+    };
+    (@spec_template $part:ident ($l1:lifetime, $l2:lifetime)) => {
+        impl<'a1, 'a2, 'b1, 'b2>  $crate::PartSpec<$part<'a1, 'a2>> for $part<'b1, 'b2> {}
+    };
+    (@spec_template $part:ident ($l1:lifetime, $l2:lifetime, $l3:lifetime)) => {
+        impl<'a1, 'a2, 'a3, 'b1, 'b2, 'b3>
+            $crate::PartSpec<$part<'a1, 'a2, 'a3>>
+        for $part<'b1, 'b2, 'b3> {}
+    };
+    (@spec_template $part:ident ($($tt:tt)*)) => {
+        // TODO avoid this limitation
+        compile_error!("parts with more than 3 lifetimes are not supported yet");
     };
 }
 
