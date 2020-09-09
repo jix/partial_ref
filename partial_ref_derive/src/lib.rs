@@ -10,25 +10,28 @@ use proc_macro2::{Span, TokenTree};
 use quote::{quote, ToTokens};
 use syn::{
     parse_macro_input, parse_quote, parse_str, Attribute, Data, DeriveInput, Lifetime, LifetimeDef,
-    Lit, Member, Meta, Type,
+    Lit, Member, Meta, Type, TypeParen,
 };
 
 fn parse_attribute_as_type(attr: &Attribute) -> Type {
     if let Some(TokenTree::Group(group)) = attr.tts.clone().into_iter().next() {
-        return parse_quote!(#group);
+        let parsed_type: Type = parse_quote!(#group);
+        // This avoids unnecessary parentheses around type warnings from the generated code.
+        if let Type::Paren(TypeParen { elem, .. }) = parsed_type {
+            return *elem;
+        }
+        return parsed_type;
     }
 
     let parse_panic = || panic!("could not parse attribute `{}`", attr.tts.to_string());
     let meta = attr.parse_meta().unwrap_or_else(|_| parse_panic());
-    match meta {
-        Meta::NameValue(name_value) => match name_value.lit {
-            Lit::Str(string) => match parse_str(&string.value()) {
+    if let Meta::NameValue(name_value) = meta {
+        if let Lit::Str(string) = name_value.lit {
+            match parse_str(&string.value()) {
                 Err(_) => panic!("could not parse type `{}` in attribute", string.value()),
                 Ok(parsed_type) => return parsed_type,
-            },
-            _ => (),
-        },
-        _ => (),
+            }
+        }
     }
     parse_panic();
     unreachable!()

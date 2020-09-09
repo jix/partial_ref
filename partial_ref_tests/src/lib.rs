@@ -28,36 +28,36 @@ pub mod isolated {
 use self::isolated::*;
 use partial_ref::*;
 
-pub fn swap_a_and_b<T>(mut foo: partial!(T, mut PartA, mut PartB))
+pub fn swap_a_and_b<T>(mut partial_ref: partial!(T, mut PartA, mut PartB))
 where
     T: PartialRefTarget,
     T: HasPart<PartA>,
     T: HasPart<PartB>,
 {
-    split_borrow!(a, b = &(mut PartA) foo);
+    split_borrow!(a, b = &(mut PartA) partial_ref);
 
     std::mem::swap(a.part_mut(PartA), b.part_mut(PartB))
 }
 
-pub fn swap_a_and_b_alt<T>(mut foo: partial!(T, mut PartA, mut PartB))
+pub fn swap_a_and_b_alt<T>(mut partial_ref: partial!(T, mut PartA, mut PartB))
 where
     T: PartialRefTarget,
     T: HasPart<PartA>,
     T: HasPart<PartB>,
 {
-    let (a, mut foo) = foo.split_part_mut(PartA);
-    let (b, _) = foo.split_part_mut(PartB);
+    let (a, mut partial_ref) = partial_ref.split_part_mut(PartA);
+    let (b, _) = partial_ref.split_part_mut(PartB);
 
     std::mem::swap(a, b);
 }
 
-pub fn swap_a_and_b_lt<'a, T>(mut foo: partial!('a T, mut PartA, mut PartB))
+pub fn swap_a_and_b_lt<'a, T>(mut partial_ref: partial!('a T, mut PartA, mut PartB))
 where
     T: PartialRefTarget,
     T: HasPart<PartA>,
     T: HasPart<PartB>,
 {
-    split_borrow!(a, b = &(mut PartA) foo);
+    split_borrow!(a, b = &(mut PartA) partial_ref);
 
     std::mem::swap(a.part_mut(PartA), b.part_mut(PartB))
 }

@@ -165,6 +165,7 @@ pub trait HasTarget {
 pub trait PartialRef<'a>: HasTarget + Sized {
     /// Create a partial reference from a raw pointer.
     ///
+    /// # Safety
     /// This is unsafe for two reasons. It can be used to dereference a raw pointer, which is
     /// already unsafe on its own, and it can be used to construct invalid partial references, for
     /// example containing the same mutable part twice. Thus extra care is required when calling
@@ -378,7 +379,7 @@ pub unsafe trait SplitIntoParts<'a, ContainingPart, Reference: PartialRef<'a>> {
 #[repr(transparent)]
 pub struct Ref<'a, Target: PartialRefTarget + ?Sized> {
     ptr: *mut Target::RawTarget,
-    phantom: PhantomData<(&'a mut Target)>,
+    phantom: PhantomData<&'a mut Target>,
 }
 
 impl<'a, Target: PartialRefTarget + ?Sized> HasTarget for Ref<'a, Target> {
@@ -551,8 +552,14 @@ pub trait PartSpec<Part> {}
 /// Implementations for this are automatically created when deriving PartialRefTarget.
 pub trait HasPart<SomePart: Part>: PartialRefTarget {
     /// Given a constant pointer to a target, produce a constant pointer to a part of it.
+    ///
+    /// # Safety
+    /// Implementations may construct a temporary reference to ptr, which thus must be valid.
     unsafe fn part_ptr(ptr: *const Self::RawTarget) -> <SomePart::PartType as PartType>::Ptr;
     /// Given a mutable pointer to a target, produce a mutable pointer to a part of it.
+    ///
+    /// # Safety
+    /// Implementations may construct a temporary reference to ptr, which thus must be valid.
     unsafe fn part_ptr_mut(ptr: *mut Self::RawTarget) -> <SomePart::PartType as PartType>::PtrMut;
 }
 

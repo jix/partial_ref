@@ -15,4 +15,4 @@ partial_ref_derive = { path = "../partial_ref_derive", version = "=0.3.1" }
 partial_ref_tests = { path = "../partial_ref_tests" }
 
 [badges]
-travis-ci = { repository = "jix/partial_ref", branch = "master" }
+maintenance = { status = "deprecated" }

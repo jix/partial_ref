@@ -2,12 +2,36 @@
 
 [![crates.io](https://img.shields.io/crates/v/partial_ref.svg)](https://crates.io/crates/partial_ref)
 [![docs.rs](https://docs.rs/partial_ref/badge.svg)](https://docs.rs/partial_ref)
-[![Build Status](https://travis-ci.com/jix/partial_ref.svg?branch=master)](https://travis-ci.com/jix/partial_ref)
 ![](https://img.shields.io/crates/l/partial_ref.svg)
 
 This crate provides type checked partial references for rust. Type checked
 partial references are one solution to solve
 [interprocedural borrowing conflicts][interprocedural-conflicts].
+
+## Soundness Issues
+
+Since I initially wrote this library, Rust's unsafe code guarantees and
+requirements have been mode more clear. I now believe that the current approach
+used to implement this library is technically undefined behavior, although the
+same technique is also used in other crates and so far does not cause issues in
+practice. Right now there is no suitable alternative to implement this in
+stable Rust, but when [`raw_const` and `raw_mut`][raw_ref_macros] land I plan
+to update this library, solving this issue.
+
+[raw_ref_macros]: https://github.com/rust-lang/rust/issues/73394
+
+## Deprecation
+
+I wrote this library for its use in [Varisat]. After making extensive use of
+this, I am not convinced that overall this is a good approach to solve
+interprocedural borrowing conflict issues. In particular I think the
+implementation is way too complex for the functionality it provides. I plan to
+eventually remove the use of this library from Varisat and will only maintain
+this library up to that point. Thus I do not recommend anyone building upon
+this.
+
+
+[varisat]: https://crates.io/crates/varisat
 
 ## Example
 
