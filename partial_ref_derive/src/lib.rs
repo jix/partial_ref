@@ -14,7 +14,7 @@ use syn::{
 };
 
 fn parse_attribute_as_type(attr: &Attribute) -> Type {
-    if let Some(TokenTree::Group(group)) = attr.tts.clone().into_iter().next() {
+    if let Some(TokenTree::Group(group)) = attr.tokens.clone().into_iter().next() {
         let parsed_type: Type = parse_quote!(#group);
         // This avoids unnecessary parentheses around type warnings from the generated code.
         if let Type::Paren(TypeParen { elem, .. }) = parsed_type {
@@ -23,7 +23,7 @@ fn parse_attribute_as_type(attr: &Attribute) -> Type {
         return parsed_type;
     }
 
-    let parse_panic = || panic!("could not parse attribute `{}`", attr.tts.to_string());
+    let parse_panic = || panic!("could not parse attribute `{}`", attr.tokens.to_string());
     let meta = attr.parse_meta().unwrap_or_else(|_| parse_panic());
     if let Meta::NameValue(name_value) = meta {
         if let Lit::Str(string) = name_value.lit {
