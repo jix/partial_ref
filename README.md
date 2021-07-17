@@ -10,26 +10,28 @@ partial references are one solution to solve
 
 ## Soundness Issues
 
-Since I initially wrote this library, Rust's unsafe code guarantees and
-requirements have been mode more clear. I now believe that the current approach
-used to implement this library is technically undefined behavior, although the
-same technique is also used in other crates and so far does not cause issues in
-practice. Right now there is no suitable alternative to implement this in
-stable Rust, but when [`raw_const` and `raw_mut`][raw_ref_macros] land I plan
-to update this library, solving this issue.
+Previous versions had a potential soundness issue regarding internal address
+computations. This was not clear at the time I wrote the first version. Later
+it became clear, but there was no viable alternative, so I added a warning to
+this readme. Now with [`addr_of`] and [`addr_of_mut`] being stabilized since
+Rust 1.51, I updated the implementation to avoid this issue.
 
-[raw_ref_macros]: https://github.com/rust-lang/rust/issues/73394
+[`addr_of`]:https://doc.rust-lang.org/std/ptr/macro.addr_of.html
+[`addr_of_mut`]:https://doc.rust-lang.org/std/ptr/macro.addr_of_mut.html
 
 ## Deprecation
 
 I wrote this library for its use in [Varisat]. After making extensive use of
 this, I am not convinced that overall this is a good approach to solve
 interprocedural borrowing conflict issues. In particular I think the
-implementation is way too complex for the functionality it provides. I plan to
-eventually remove the use of this library from Varisat and will only maintain
-this library up to that point. Thus I do not recommend anyone building upon
-this.
+implementation is way too complex for the functionality it provides.
 
+I am currently working on a new version of this library that implements the
+same essential idea using a slightly simpler API and a much simpler
+implementation. In general I would recommend trying alternative workarounds to
+avoid interprocedural borrowing conflicts, but if you come to the conclusion
+that partial references are the best solution for your use case, my advice
+would be to wait for the new version of this library to be released.
 
 [varisat]: https://crates.io/crates/varisat
 

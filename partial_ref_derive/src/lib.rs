@@ -270,14 +270,14 @@ pub fn derive_partial_ref_target(input: TokenStream) -> TokenStream {
                 unsafe fn part_ptr(
                     ptr: *const Self
                 ) -> <<#part as ::partial_ref::Part>::PartType as ::partial_ref::PartType>::Ptr  {
-                    &(*ptr).#member as *const _
+                    ::core::ptr::addr_of!((*ptr).#member)
                 }
 
                 #[inline(always)]
                 unsafe fn part_ptr_mut(
                     ptr: *mut Self
                 ) -> <<#part as ::partial_ref::Part>::PartType as ::partial_ref::PartType>::PtrMut {
-                    &mut (*ptr).#member as *mut _
+                    ::core::ptr::addr_of_mut!((*ptr).#member)
                 }
             }
         }));

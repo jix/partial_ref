@@ -1,6 +1,6 @@
 [package]
 name = "partial_ref_tests"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Jannis Harder <me@jix.one>"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/jix/partial_ref"
