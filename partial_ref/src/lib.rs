@@ -420,7 +420,7 @@ pub struct Mut<Part, Reference: HasTarget> {
     phantom: PhantomData<(Reference, Part)>,
 }
 
-impl<'a, SomePart: Part, Reference: PartialRef<'a>> HasTarget for Mut<SomePart, Reference>
+impl<SomePart: Part, Reference: HasTarget> HasTarget for Mut<SomePart, Reference>
 where
     Reference::Target: HasPart<SomePart>,
 {
@@ -454,7 +454,7 @@ pub struct Const<Part, Reference: HasTarget> {
     phantom: PhantomData<(Reference, Part)>,
 }
 
-impl<'a, SomePart: Part, Reference: PartialRef<'a>> HasTarget for Const<SomePart, Reference>
+impl<SomePart: Part, Reference: HasTarget> HasTarget for Const<SomePart, Reference>
 where
     Reference::Target: HasPart<SomePart>,
 {
